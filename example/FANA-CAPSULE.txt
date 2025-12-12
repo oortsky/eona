@@ -1,0 +1,7 @@
+FANA CAPSULE INFORMATION
+
+Capsule Name: <Your Capsule Name>
+Capsule Code: <Your Capsule Pin>
+Capsule Owner: <Your Email>
+Capsule Coordinate: <Your Capsule Coordinate>
+Unlocked Date: <Date>
