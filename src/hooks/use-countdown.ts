@@ -28,11 +28,10 @@ export function useCountdown() {
       const launch = new Date(launchDate).getTime();
       const close = new Date(closeDate).getTime();
 
-      // Cek status
       if (now < launch) {
         setStatus("pre-launch");
         setIsOpen(false);
-        // Countdown ke launch date
+
         const difference = launch - now;
         setTimeLeft({
           days: Math.floor(difference / (1000 * 60 * 60 * 24)),
@@ -43,7 +42,7 @@ export function useCountdown() {
       } else if (now >= launch && now <= close) {
         setStatus("launched");
         setIsOpen(true);
-        // Countdown ke close date
+
         const difference = close - now;
 
         if (difference > 0) {

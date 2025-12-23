@@ -31,16 +31,20 @@ import {
   InputOTPGroup,
   InputOTPSlot
 } from "@/components/ui/input-otp";
-import { MailIcon, KeyRound, Unlock } from "lucide-react";
+import { MailIcon, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { openCapsule, getCapsule } from "@/lib/capsule";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import type { Footprint } from "@/types/capsule";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   code: z.string().min(6, "Code must be at least 6 characters")
 });
 
-export default function UnlockPage() {
+export default function Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -52,32 +56,105 @@ export default function UnlockPage() {
     }
   });
 
+  const getLocation = (): Promise<Footprint> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by your browser"));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: new Date().toISOString()
+          });
+        },
+        error => {
+          reject(error);
+        }
+      );
+    });
+  };
+
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
-      // TODO: Implement unlock logic
-      // Verify email + code with your backend
-      // const response = await fetch('/api/unlock', {
-      //   method: 'POST',
-      //   body: JSON.stringify(data)
-      // });
+      const capsuleResult = await getCapsule(data.email, "user_email");
 
-      // Mock success for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!capsuleResult.success || !capsuleResult.capsule) {
+        toast.error("No capsule found for this email");
+        setLoading(false);
+        return;
+      }
 
-      toast.success("Capsule unlocked successfully!");
-      // Redirect to capsule content page
-      // router.push(`/capsule/${capsuleId}`);
+      const capsule = capsuleResult.capsule;
+
+      let currentLocation: Footprint | undefined = undefined;
+
+      if (capsule.footprint) {
+        try {
+          toast.loading("Getting your location...");
+          currentLocation = await getLocation();
+          toast.dismiss();
+        } catch (error) {
+          toast.dismiss();
+          console.error("Failed to get location:", error);
+          toast.error(
+            "This capsule requires location access. Please enable location permissions."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await openCapsule(
+        capsule.$id,
+        "id",
+        data.code,
+        currentLocation
+      );
+
+      if (result.success) {
+        toast.success("Capsule unlocked successfully!");
+        router.push(`/capsule/${capsule.$id}`);
+      } else {
+        if (result.message === "Capsule already opened") {
+          toast.info("This capsule has already been opened");
+          router.push(`/capsule/${capsule.$id}`);
+        } else if (result.message === "Capsule is still locked") {
+          toast.error(
+            `Capsule is still locked until ${
+              result.lockedUntil
+                ? format(new Date(result.lockedUntil), "EEEE, dd MMMM yyyy", {
+                    locale: idLocale
+                  })
+                : "the designated time"
+            }`
+          );
+        } else if (result.requiresLocation) {
+          toast.error(result.message || "Location verification required");
+          if (result.distance) {
+            toast.info(
+              `You are ${result.distance}m away from the designated location`
+            );
+          }
+        } else {
+          toast.error(result.message || "Failed to unlock capsule");
+        }
+      }
     } catch (error) {
-      console.error(error);
-      toast.error("Invalid email or code. Please try again.");
+      console.error("Unlock error:", error);
+      toast.error("An error occurred while unlocking the capsule");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="container mx-auto flex flex-col justify-center items-center py-12 px-4 min-h-screen">
+    <div className="container mx-auto flex flex-col justify-center items-center py-12 px-4 min-h-[100dvh]">
       <div className="mb-12 text-center">
         <h1 className="text-6xl font-logo tracking-widest drop-shadow-lg -mb-1 -mr-2 mb-4">
           EONA
@@ -184,7 +261,15 @@ export default function UnlockPage() {
             form="form-unlock"
             disabled={loading}
           >
-            {loading ? <Spinner /> : <Unlock />} Unlock Capsule
+            {loading ? (
+              <>
+                <Spinner /> Unlocking...
+              </>
+            ) : (
+              <>
+                <Unlock /> Unlock Capsule
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>

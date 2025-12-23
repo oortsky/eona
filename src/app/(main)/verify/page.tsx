@@ -2,9 +2,10 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Timer, CircleCheck, CircleX } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Clock, CircleCheck, CircleX } from "lucide-react";
 import Link from "next/link";
+import { pluralize } from "@/utils/pluralize";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,73 +18,12 @@ import {
   EmptyTitle
 } from "@/components/ui/empty";
 
-interface DisplayProps {
-  title: string;
-  description: string;
-  status: "waiting" | "success" | "failed";
-  countdown?: number;
-}
-
-function Display({ title, description, status, countdown }: DisplayProps) {
-  const getIcon = () => {
-    switch (status) {
-      case "waiting":
-        return <Timer />;
-      case "success":
-        return <CircleCheck />;
-      case "failed":
-        return <CircleX />;
-    }
-  };
-
-  const getAction = () => {
-    switch (status) {
-      case "waiting":
-        return (
-          <Button variant="glossy" size="sm" className="rounded-full" asChild>
-            <Link href="mailto:?">Go to Email</Link>
-          </Button>
-        );
-      case "success":
-        return (
-          <div className="flex flex-col items-center gap-2">
-            {countdown !== undefined && countdown > 0 && (
-              <p className="text-sm text-muted-foreground">
-                Redirecting in {countdown} seconds...
-              </p>
-            )}
-            <Button variant="glossy" size="sm" className="rounded-full" asChild>
-              <Link href="/capsule">Go to Capsule</Link>
-            </Button>
-          </div>
-        );
-      case "failed":
-        return (
-          <Button variant="glossy" size="sm" className="rounded-full" asChild>
-            <Link href="/">Back to Home</Link>
-          </Button>
-        );
-    }
-  };
-
-  return (
-    <Empty className="container mx-auto py-12 px-4 w-full min-h-screen">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">{getIcon()}</EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>{getAction()}</EmptyContent>
-    </Empty>
-  );
-}
-
 export default function Page() {
-  const { verifyMagicLink, isAuthenticated } = useAuth();
+  const { verifyMagicLink } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(5);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const hasVerified = useRef(false);
 
   const status = searchParams.get("status") as
     | "waiting"
@@ -93,17 +33,28 @@ export default function Page() {
   const secret = searchParams.get("secret");
   const userId = searchParams.get("userId");
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && status !== "success") {
-      router.push("/capsule");
-    }
-  }, [isAuthenticated, status, router]);
+  const handleRedirect = async () => {
+    try {
+      const response = await fetch("/api/auth/get-token");
+      const data = await response.json();
 
-  // Handle magic link verification
+      if (!data.token) {
+        throw new Error("Verification token not found");
+      }
+
+      await fetch("/api/auth/delete-token", {
+        method: "DELETE"
+      });
+
+      router.push("/capsule");
+    } catch (error) {
+      console.error("Failed to verify token:", error);
+    }
+  };
+
   useEffect(() => {
-    if (secret && userId && !isVerifying) {
-      setIsVerifying(true);
+    if (secret && userId && !hasVerified.current) {
+      hasVerified.current = true;
 
       const verify = async () => {
         try {
@@ -117,78 +68,153 @@ export default function Page() {
 
       verify();
     }
-  }, [secret, userId, verifyMagicLink, router, isVerifying]);
+  }, [secret, userId, verifyMagicLink, router]);
 
-  // Auto redirect on success
   useEffect(() => {
-    if (status === "success") {
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            router.push("/capsule");
-            return 0;
-          }
-          return prev - 1;
-        });
+    if (status !== "success") return;
+
+    if (countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(c => Math.max(0, c - 1));
       }, 1000);
-
-      return () => clearInterval(timer);
+      return () => clearTimeout(timer);
     }
-  }, [status, router]);
 
-  // Show verifying state
-  if (secret && userId) {
+    if (countdown === 0) {
+      handleRedirect();
+    }
+  }, [status, countdown]);
+
+  if (secret && userId && !status) {
     return (
-      <Empty className="container mx-auto py-12 px-4">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Spinner />
-          </EmptyMedia>
-          <EmptyTitle>Verifying...</EmptyTitle>
-          <EmptyDescription>
-            Please wait while we verify your magic link.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <Display
+        status="process"
+        title="Authenticating"
+        description="We're securely verifying your magic link. This will only take a moment..."
+      />
     );
   }
 
-  // Handle status display
   if (status) {
     switch (status) {
       case "waiting":
         return (
           <Display
             status="waiting"
-            title="Check Your Email"
-            description="We've sent a magic link to your email. Click the link to sign in."
+            title="Magic Link Sent!"
+            description="We've sent a secure sign-in link to your email address. Please check your inbox and click the link to continue."
           />
         );
       case "success":
         return (
           <Display
             status="success"
-            title="Success!"
-            description="You've been signed in successfully. You can now access your capsule."
-            countdown={countdown}
+            title="Welcome Back!"
+            description={`Authentication successful! Redirecting you to your capsule in ${countdown} ${pluralize(
+              countdown,
+              "second",
+              "seconds"
+            )}...`}
+            onRedirect={handleRedirect}
           />
         );
       case "failed":
         return (
           <Display
             status="failed"
-            title="Verification Failed"
-            description="The magic link is invalid or has expired. Please try again."
+            title="Authentication Failed"
+            description="This magic link has expired or is invalid. Please request a new sign-in link and try again."
           />
         );
       default:
-        router.push("/");
         return null;
     }
   }
 
-  // Default: redirect to home if no params
-  router.push("/");
   return null;
+}
+
+interface DisplayProps {
+  title: string;
+  description: string;
+  status: "waiting" | "process" | "success" | "failed";
+  onRedirect?: () => void;
+}
+
+function Display({ title, description, status, onRedirect }: DisplayProps) {
+  const getIcon = () => {
+    switch (status) {
+      case "waiting":
+        return <Clock className="size-8 text-blue-600 dark:text-blue-400" />;
+      case "process":
+        return <Spinner className="size-8" />;
+      case "success":
+        return (
+          <CircleCheck className="size-8 text-green-600 dark:text-green-400" />
+        );
+      case "failed":
+        return <CircleX className="size-8 text-red-600 dark:text-red-400" />;
+    }
+  };
+
+  const getAction = () => {
+    switch (status) {
+      case "waiting":
+        return (
+          <div className="flex flex-col gap-4 items-center">
+            <Button variant="glossy" size="sm" className="rounded-full" asChild>
+              <Link href="mailto:">Open Email App</Link>
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Didn't receive it?{" "}
+              <Link href="/" className="underline hover:text-foreground">
+                Try again
+              </Link>
+            </p>
+          </div>
+        );
+      case "success":
+        return (
+          <Button
+            variant="glossy"
+            size="sm"
+            className="rounded-full"
+            onClick={onRedirect}
+          >
+            Go to Capsule Now
+          </Button>
+        );
+      case "failed":
+        return (
+          <div className="flex flex-col gap-4 items-center">
+            <Button variant="glossy" size="sm" className="rounded-full" asChild>
+              <Link href="/">Request New Link</Link>
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Need help?{" "}
+              <Link href="/support" className="underline hover:text-foreground">
+                Contact support
+              </Link>
+            </p>
+          </div>
+        );
+      case "process":
+        return null;
+    }
+  };
+
+  return (
+    <Empty className="container mx-auto py-12 px-4 w-full min-h-[100dvh]">
+      <EmptyHeader>
+        <EmptyMedia className="rounded-full size-16" variant="icon">
+          {getIcon()}
+        </EmptyMedia>
+        <EmptyTitle className="text-2xl">{title}</EmptyTitle>
+        <EmptyDescription className="text-base max-w-md mx-auto">
+          {description}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>{getAction()}</EmptyContent>
+    </Empty>
+  );
 }

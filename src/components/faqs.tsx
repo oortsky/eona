@@ -45,7 +45,6 @@ export function FAQs({ faqs }: { faqs: FAQs[] }) {
   return (
     <Card>
       <CardHeader>
-        {/* Search */}
         <InputGroup
           data-empty={!query}
           className="flex-1 rounded-full [&[data-empty=true]_*]:text-muted-foreground [&:not([data-empty=true])_*]:text-foreground"
@@ -61,7 +60,7 @@ export function FAQs({ faqs }: { faqs: FAQs[] }) {
         </InputGroup>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="max-h-[300px] w-full">
+        <ScrollArea className="h-[600px] w-full">
           {filteredFAQs.length === 0 ? (
             <Empty className="from-muted/50 to-background h-full bg-gradient-to-b from-30%">
               <EmptyHeader>

@@ -1,10 +1,13 @@
-import { Client, Account, Databases } from "appwrite";
+import { Client, Account, Databases, Storage } from "appwrite";
 
-const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT! as string)
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID! as string);
+export const client = new Client()
+  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
 
-const account = new Account(client)
-const databases = new Databases(client);
+export const account = new Account(client);
+export const databases = new Databases(client);
+export const storage = new Storage(client);
 
-export { client, account, databases };
+export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
+export const CAPSULE_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_CAPSULE_COLLECTION_ID!;
+export const STORAGE_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!;

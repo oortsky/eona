@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-// import { ProtectedRoute } from "@/components/protected-route";
 
 export const metadata: Metadata = {
-  title: "EONA - Plant Your Capsule"
+  title: "EONA - Ready to plant your capsule?"
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

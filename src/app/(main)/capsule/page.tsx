@@ -1,15 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { addYears, format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import * as z from "zod";
-import { Upload, X, Save, Sprout } from "lucide-react";
+import { Upload, X, Save, Sprout, AlertCircle } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useAuth } from "@/contexts/auth-context";
+import { createCapsule } from "@/lib/capsule";
+import { uploadAttachment } from "@/lib/storage";
+import { getCurrentLocation } from "@/utils/geolocation";
+import type { Footprint } from "@/types/capsule";
 
+import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
@@ -46,6 +54,8 @@ import {
   EmptyTitle
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z
@@ -59,7 +69,7 @@ const formSchema = z.object({
   attachment: z
     .instanceof(File)
     .refine(file => file.size <= 50 * 1024 * 1024, {
-      message: "File must be less than 50MB" // Recommended 20MB
+      message: "File must be less than 50MB"
     })
     .refine(
       file => {
@@ -97,14 +107,19 @@ const formSchema = z.object({
 
 const STORAGE_KEY = "time-capsule-draft";
 
-export default function Page() {
+function CreateCapsule() {
+  const router = useRouter();
+  const { user } = useAuth();
+
   const [preview, setPreview] = React.useState<string | null>(null);
   const [fileType, setFileType] = React.useState<
     "image" | "video" | "audio" | null
   >(null);
   const [fileName, setFileName] = React.useState<string>("");
-  const [isSaving, setIsSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,7 +136,6 @@ export default function Page() {
   const nameValue = form.watch("name");
   const unlockDate = addYears(new Date(), yearsLocked);
 
-  // Load draft from localStorage on mount
   React.useEffect(() => {
     const savedDraft = localStorage.getItem(STORAGE_KEY);
     if (savedDraft) {
@@ -132,11 +146,9 @@ export default function Page() {
         form.setValue("years_locked", draft.years_locked || 1);
         form.setValue("code", draft.code || "");
 
-        // Restore file preview if exists
         if (draft.fileName) {
           setFileName(draft.fileName);
           setFileType(draft.fileType);
-          // Note: Cannot restore actual File object, only metadata
         }
       } catch (error) {
         console.error("Failed to load draft:", error);
@@ -144,7 +156,6 @@ export default function Page() {
     }
   }, [form]);
 
-  // Auto-save to localStorage on form changes
   React.useEffect(() => {
     const subscription = form.watch(values => {
       const draft = {
@@ -168,7 +179,6 @@ export default function Page() {
 
     setFileName(file.name);
 
-    // Detect file type
     if (file.type.startsWith("image/")) {
       setFileType("image");
       setPreview(URL.createObjectURL(file));
@@ -203,89 +213,109 @@ export default function Page() {
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     try {
-      // Get current user from Appwrite
-      // const { user } = useAuth();
+      if (!user?.$id || !user?.email) {
+        toast.error("Authentication Error", {
+          description: "Please login first!"
+        });
+        return;
+      }
 
-      // Calculate locked_until date
+      setLoading(true);
+
       const locked_until = addYears(
         new Date(),
         data.years_locked
       ).toISOString();
 
-      // Get user's location with fallback
-      getLocation(footprint => {
-        console.log({
-          // user_id: user?.$id,
-          // user_email: user?.email,
-          name: data.name,
-          message: data.message,
-          attachment: data.attachment,
-          locked_until: locked_until,
-          code: data.code,
-          footprint: footprint // null if location unavailable
+      let footprint: Footprint | null = null;
+      try {
+        footprint = await getCurrentLocation({
+          timeout: 10000,
+          maximumAge: 60000
         });
+        console.log("Location captured:", footprint);
+      } catch (error) {
+        console.warn("Failed to get location:", error);
+      }
 
-        // Here you would typically:
-        // 1. Hash the code using bcrypt
-        // 2. Encrypt the message using the code
-        // 3. Upload the attachment if present
-        // 4. Save to database (including footprint)
+      let attachmentData;
+      if (data.attachment) {
+        const uploadResult = await uploadAttachment(data.attachment);
 
-        // Clear draft after successful submission
+        if (!uploadResult.success) {
+          toast.error("Upload Failed", {
+            description: uploadResult.error || "Failed to upload file"
+          });
+          setLoading(false);
+          return;
+        }
+
+        attachmentData = {
+          fileId: uploadResult.fileId!,
+          name: data.attachment.name,
+          size: data.attachment.size,
+          type: data.attachment.type,
+          lastModified: data.attachment.lastModified,
+          url: uploadResult.url!
+        };
+      }
+      
+      const result = await createCapsule({
+        userId: user.$id,
+        userEmail: user.email,
+        name: data.name,
+        message: data.message,
+        code: data.code,
+        lockedUntil: locked_until,
+        footprint,
+        attachmentData
+      });
+
+      if (result.success) {
         localStorage.removeItem(STORAGE_KEY);
 
-        const locationStatus = footprint ? "" : " (Location not available)";
-        alert(`Time Capsule Created!${locationStatus}`);
+        form.reset();
+        removeFile();
 
-        // Redirect to success page
-        // router.push('/success');
-      });
-    } catch (error) {
-      console.error("Error getting user:", error);
-      alert("Please login first!");
-    }
-  }
+        const locationStatus = footprint
+          ? "with location lock"
+          : "without location lock";
 
-  function getLocation(callback: (footprint: any) => void) {
-    // Check if geolocation is supported
-    if (!navigator.geolocation) {
-      console.log("Geolocation not supported");
-      callback(null);
-      return;
-    }
+        toast.success("Success!", {
+          description: `Time Capsule created ${locationStatus}`
+        });
 
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const footprint = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: new Date().toISOString()
-        };
-        callback(footprint);
-      },
-      error => {
-        console.error("Location error:", error.message);
-        callback(null); // Continue without location
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000, // 10 seconds
-        maximumAge: 60000 // Accept 1 minute cache
+        router.push(`/result?status=success&id=${result?.capsule?.$id}`);
+      } else {
+        toast.error("Creation Failed", {
+          description: result.error || "Failed to create capsule"
+        });
       }
-    );
+    } catch (error) {
+      console.error("Create capsule error:", error);
+      toast.error("Error", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred"
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   const saveDraft = () => {
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
-      alert("Draft saved!");
+      toast.success("Draft saved!", {
+        description: "Your progress has been saved locally"
+      });
     }, 500);
   };
 
   return (
-    <div className="container mx-auto py-36 px-4 w-full min-h-screen">
+    <div className="container mx-auto py-12 px-4 w-full min-h-[100dvh]">
       <div className="mb-12 text-center">
         <h1 className="text-6xl font-logo tracking-widest drop-shadow-lg -mb-1 -mr-2 mb-4">
           EONA
@@ -295,7 +325,7 @@ export default function Page() {
         </p>
       </div>
 
-      <Card className="w-full max-w-2xl mx-auto rounded-2xl shadow-[0_8px_24px_hsl(var(--primary)/0.4),0_4px_8px_hsl(var(--primary)/0.2),inset_0_1px_0_rgba(255,255,255,0.3)]">
+      <Card className="w-full max-w-2xl mx-auto rounded-2xl bg-gradient-to-b from-background/90 via-background to-background/80 shadow-[0_8px_24px_hsl(var(--primary)/0.4),0_4px_8px_hsl(var(--primary)/0.2),inset_0_1px_0_rgba(255,255,255,0.3)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-b before:from-white/25 before:to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -307,10 +337,10 @@ export default function Page() {
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={saveDraft}
-              disabled={isSaving}
-              className="size-8 rounded-full"
+              disabled={loading || isSaving}
+              className="p-2 rounded-full text-muted-foreground"
             >
               {isSaving ? (
                 <Spinner className="h-4 w-4" />
@@ -337,6 +367,7 @@ export default function Page() {
                       placeholder="Write a name for your capsule..."
                       className="rounded-2xl dark:bg-input/30"
                       maxLength={25}
+                      disabled={loading || isSaving}
                     />
                     <FieldDescription>
                       Give your capsule a memorable name - so that you can
@@ -369,6 +400,7 @@ export default function Page() {
                         minRows={4}
                         minLength={100}
                         maxLength={600}
+                        disabled={loading || isSaving}
                       />
                       <InputGroupAddon align="block-end">
                         <InputGroupText className="text-muted-foreground text-xs tabular-nums">
@@ -427,6 +459,7 @@ export default function Page() {
                           accept="image/*,video/*,audio/*"
                           onChange={handleFileChange}
                           className="hidden"
+                          disabled={loading || isSaving}
                         />
                       </Empty>
                     ) : (
@@ -455,16 +488,6 @@ export default function Page() {
                               />
                             </div>
                           )}
-
-                          {/* <Button
-                            type="button"
-                            variant="glossy-destructive"
-                            size="icon-sm"
-                            className="absolute top-2 right-2 rounded-full"
-                            onClick={removeFile}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button> */}
                         </div>
 
                         <div className="flex justify-between items-center">
@@ -478,6 +501,7 @@ export default function Page() {
                             size="icon-sm"
                             onClick={removeFile}
                             className="rounded-full text-muted-foreground"
+                            disabled={loading || isSaving}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -514,10 +538,15 @@ export default function Page() {
                       value={[field.value]}
                       onValueChange={value => field.onChange(value[0])}
                       className="py-4"
+                      disabled={loading || isSaving}
                     />
                     <FieldDescription>
                       Will unlock on:{" "}
-                      <strong>{format(unlockDate, "MMMM dd, yyyy")}</strong>
+                      <strong>
+                        {format(new Date(unlockDate), "EEEE, dd MMMM yyyy", {
+                          locale: idLocale
+                        })}
+                      </strong>
                     </FieldDescription>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
@@ -539,6 +568,7 @@ export default function Page() {
                       maxLength={6}
                       value={field.value}
                       onChange={field.onChange}
+                      disabled={loading || isSaving}
                     >
                       <InputOTPGroup className="flex-1 justify-between">
                         <InputOTPSlot
@@ -579,6 +609,20 @@ export default function Page() {
               />
             </FieldGroup>
           </form>
+
+          <Separator />
+
+          <Alert
+            variant="default"
+            className="border-orange-300 text-orange-300 dark:text-orange-400 dark:border-orange-400"
+          >
+            <AlertCircle className="size-3" />
+            <AlertTitle>Important</AlertTitle>
+            <AlertDescription>
+              Remember or note where you placed your capsule and what your
+              secret code. This information is not stored anywhere else.
+            </AlertDescription>
+          </Alert>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button
@@ -586,6 +630,7 @@ export default function Page() {
             variant="glossy-outline"
             onClick={reset}
             className="rounded-full"
+            disabled={loading || isSaving}
           >
             Reset
           </Button>
@@ -594,11 +639,28 @@ export default function Page() {
             form="time-capsule-form"
             className="rounded-full"
             variant="glossy"
+            disabled={loading || isSaving}
           >
-            <Sprout /> Plant Capsule
+            {loading ? (
+              <>
+                <Spinner /> Planting..
+              </>
+            ) : (
+              <>
+                <Sprout /> Plant Capsule
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <ProtectedRoute requireNoCapsule={true}>
+      <CreateCapsule />
+    </ProtectedRoute>
   );
 }

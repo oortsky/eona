@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <Empty className="container mx-auto py-12 px-4">
+    <Empty className="container w-full min-h-[100dvh] mx-auto py-12 px-4">
       <EmptyHeader>
-        <EmptyMedia variant="icon">
+        <EmptyMedia className="rounded-full size-16" variant="icon">
           <FileX />
         </EmptyMedia>
         <EmptyTitle>404 - Not Found</EmptyTitle>

@@ -17,7 +17,6 @@ export function Footer() {
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          {/* Brand Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-logo">EONA</h3>
             <p className="text-sm text-muted-foreground font-mono">
@@ -61,7 +60,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Resources Links */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm">
@@ -84,7 +82,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal Links */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold">Legal</h4>
             <ul className="space-y-2 text-sm">
@@ -110,7 +107,6 @@ export function Footer() {
 
         <Separator className="my-8" />
 
-        {/* Bottom Section */}
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
             <span>

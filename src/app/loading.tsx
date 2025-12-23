@@ -7,8 +7,8 @@ export const metadata: Metadata = {
 
 export default function Loading() {
   return (
-    <main className="w-full min-h-screen flex items-center justify-center">
-      <Spinner className="size-6" />
+    <main className="container w-full min-h-[100dvh] mx-auto flex items-center justify-center">
+      <Spinner className="size-8" />
     </main>
   );
 }

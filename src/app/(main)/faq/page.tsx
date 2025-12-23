@@ -24,7 +24,7 @@ export default async function Page() {
 
   if (!entry || !entry.items || entry.items.length === 0) {
     return (
-      <Empty className="container mx-auto py-12 px-4 w-full min-h-screen">
+      <Empty className="container mx-auto py-12 px-4 w-full min-h-[100dvh]">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <CircleX />
@@ -59,7 +59,7 @@ export default async function Page() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-36 w-full min-h-screen">
+    <div className="container mx-auto px-4 py-12 w-full min-h-[100dvh]">
       {/* Header */}
       <Button className="mb-2 p-0" variant="link" asChild>
         <Link href="/">

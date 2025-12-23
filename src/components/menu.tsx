@@ -31,21 +31,25 @@ import { toast } from "sonner";
 
 export function Menu() {
   const [open, setOpen] = useState(false);
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
-  // Handle sign out
   async function handleSignOut() {
     try {
       setIsLoggingOut(true);
-      await logout();
       setOpen(false);
-      toast.success("Signed out successfully");
+
+      await logout();
+
+      toast.success("Successfully signed out");
       router.push("/");
+      router.refresh();
     } catch (error) {
       console.error("Sign out error:", error);
-      toast.error("Failed to sign out. Please try again.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to sign out"
+      );
     } finally {
       setIsLoggingOut(false);
     }
@@ -65,15 +69,18 @@ export function Menu() {
       >
         {isLoading ? (
           <DropdownMenuItem>
-            <Spinner /> Loading...
+            <Spinner className="size-4" />
+            <span>Loading...</span>
           </DropdownMenuItem>
-        ) : user ? (
+        ) : isAuthenticated ? (
           <DropdownMenuItem>
-            <User /> <span className="line-clamp-1">{user.email}</span>
+            <User className="size-4" />
+            <span className="line-clamp-1">{user?.email}</span>
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem>
-            <User /> Guest
+            <User className="size-4" />
+            <span>Guest</span>
           </DropdownMenuItem>
         )}
 
@@ -81,22 +88,22 @@ export function Menu() {
 
         <DropdownMenuItem className="rounded-xl" asChild>
           <Link href="/intro">
-            <Boxes /> Introduction
+            <Boxes className="size-4" /> Introduction
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
           <Link href="/faq">
-            <MessageCircleQuestion /> FAQ
+            <MessageCircleQuestion className="size-4" /> FAQ
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
           <Link href="/privacy">
-            <GlobeLock /> Privacy Policy
+            <GlobeLock className="size-4" /> Privacy Policy
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
           <Link href="/terms">
-            <Handshake /> Terms of Service
+            <Handshake className="size-4" /> Terms of Service
           </Link>
         </DropdownMenuItem>
 
@@ -108,7 +115,7 @@ export function Menu() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Github /> GitHub
+            <Github className="size-4" /> GitHub
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
@@ -117,7 +124,7 @@ export function Menu() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Twitter /> X/Twitter
+            <Twitter className="size-4" /> X/Twitter
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
@@ -126,20 +133,20 @@ export function Menu() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Instagram /> Instagram
+            <Instagram className="size-4" /> Instagram
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="rounded-xl" asChild>
           <Link
-            href="https://trakte.er/oortsky"
+            href="https://trakteer.id/oortsky/tip"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Coffee /> Trakteer
+            <Coffee className="size-4" /> Trakteer
           </Link>
         </DropdownMenuItem>
 
-        {user && (
+        {isAuthenticated && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -147,7 +154,11 @@ export function Menu() {
               onClick={handleSignOut}
               disabled={isLoggingOut}
             >
-              {isLoggingOut ? <Spinner /> : <LogOut />}
+              {isLoggingOut ? (
+                <Spinner className="size-4" />
+              ) : (
+                <LogOut className="size-4" />
+              )}
               {isLoggingOut ? "Signing out..." : "Sign Out"}
             </DropdownMenuItem>
           </>

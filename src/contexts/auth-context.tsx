@@ -10,7 +10,7 @@ type AuthContextType = {
   session: Models.Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  sendMagicLink: (email: string, redirectUrl: string) => Promise<void>;
+  sendMagicLink: (email: string, redirectUrl?: string) => Promise<void>;
   verifyMagicLink: (userId: string, secret: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -25,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Models.Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get current session and user on mount
   useEffect(() => {
     checkAuth();
   }, []);
@@ -39,7 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentSession = await account.getSession("current");
       setSession(currentSession);
     } catch (error) {
-      // User not logged in
       setUser(null);
       setSession(null);
     } finally {
@@ -47,9 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const sendMagicLink = async (email: string, redirectUrl: string) => {
+  const sendMagicLink = async (email: string, redirectUrl?: string) => {
     try {
-      await account.createMagicURLToken(ID.unique(), email, redirectUrl);
+      let finalRedirectUrl = redirectUrl;
+
+      if (!finalRedirectUrl) {
+        finalRedirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify`;
+      }
+
+      await fetch("/api/auth/set-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+      });
+
+      await account.createMagicURLToken(ID.unique(), email, finalRedirectUrl);
     } catch (error) {
       console.error("Failed to send magic link:", error);
       throw error;
@@ -58,6 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyMagicLink = async (userId: string, secret: string) => {
     try {
+      const response = await fetch("/api/auth/get-token");
+      const data = await response.json();
+
+      if (!data.token) {
+        throw new Error("Verification token not found");
+      }
+
       const newSession = await account.createSession(userId, secret);
       setSession(newSession);
 
@@ -84,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkAuth();
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     session,
     isLoading,

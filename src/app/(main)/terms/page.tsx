@@ -24,7 +24,7 @@ export default async function Page() {
 
   if (!entry) {
     return (
-      <Empty className="container mx-auto py-12 px-4 w-full min-h-screen">
+      <Empty className="container mx-auto py-12 px-4 w-full min-h-[100dvh]">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <CircleX />
@@ -64,7 +64,7 @@ export default async function Page() {
     : "No date";
 
   return (
-    <article className="container mx-auto px-4 py-36 w-full min-h-screen">
+    <article className="container mx-auto px-4 py-12 w-full min-h-[100dvh]">
       {/* Header */}
       <Button className="mb-2 p-0" variant="link" asChild>
         <Link href="/">
@@ -78,9 +78,10 @@ export default async function Page() {
 
       <Separator className="my-6" />
 
-      {/* Content */}
-      <ScrollArea className="max-h-[400px] w-full">
-        {Markdoc.renderers.react(renderable, React)}
+      <ScrollArea className="h-[600px] w-full">
+        <div className="prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-foreground prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6 prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5 prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4 prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-3 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-strong:font-semibold prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6 prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6 prose-li:mb-1 prose-li:text-muted-foreground prose-code:text-sm prose-code:bg-muted prose-code:text-foreground prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-muted prose-pre:text-foreground prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-blockquote:border-l-4 prose-blockquote:border-border prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-muted-foreground prose-hr:border-border prose-hr:my-6 prose-em:italic prose-em:text-muted-foreground">
+          {Markdoc.renderers.react(renderable, React)}
+        </div>
       </ScrollArea>
     </article>
   );

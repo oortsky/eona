@@ -1,15 +1,30 @@
-export interface CapsuleProps {
-  // id: string; // Auto
-  user_id: string; // Get from Appwrite Auth (Session Magic Link)
-  user_email: string; // Get from Appwrite Auth (Session Magic Link)
-  footprint: string; // Auto using footprint.js
-  name: string; // Auto or Manual Setting
-  code: number; // 6 Pin of number
-  attachment: string; // Media URL (Store in bucket) *only select one between image, audio & video. And size only 5mb
-  message: string; // 500 Characters or more maybe
-  locked_until: string; // Up to 3 years
-  coordinate: {
-    lat: number
-    lang: number
-  }
+export interface Footprint {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: string;
+}
+
+export interface Attachment {
+  fileId: string;
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+  url: string;
+}
+
+export interface Capsule {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  user_id: string;
+  user_email: string;
+  name: string;
+  message: string;
+  code: string;
+  locked_until: string;
+  footprint: string | null;
+  attachment: string | null;
+  is_opened: boolean;
 }
