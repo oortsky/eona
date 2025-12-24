@@ -259,7 +259,7 @@ function CreateCapsule() {
           url: uploadResult.url!
         };
       }
-      
+
       const result = await createCapsule({
         userId: user.$id,
         userEmail: user.email,
@@ -325,7 +325,7 @@ function CreateCapsule() {
         </p>
       </div>
 
-      <Card className="w-full max-w-2xl mx-auto rounded-2xl bg-gradient-to-b from-background/90 via-background to-background/80 shadow-[0_8px_24px_hsl(var(--primary)/0.4),0_4px_8px_hsl(var(--primary)/0.2),inset_0_1px_0_rgba(255,255,255,0.3)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-b before:from-white/25 before:to-transparent">
+      <Card className="w-full max-w-2xl mx-auto rounded-2xl bg-gradient-to-b from-background/90 via-background to-background/80 shadow-[0_8px_24px_hsl(var(--primary)/0.4),0_4px_8px_hsl(var(--primary)/0.2),inset_0_1px_0_rgba(255,255,255,0.3)]">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
