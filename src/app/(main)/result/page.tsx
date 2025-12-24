@@ -73,7 +73,7 @@ export default function ResultPage() {
           <Display
             status="success"
             title="Time Capsule Sealed!"
-            description={`"${capsuleData?.name}" will open on ${formattedDate} for ${capsuleData?.user_email}.`}
+            description={`${capsuleData?.name} will open on ${formattedDate} for ${capsuleData?.user_email}.`}
           />
         );
       case "failed":

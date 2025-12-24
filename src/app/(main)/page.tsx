@@ -118,15 +118,15 @@ export default function Page() {
   }, [isAuthenticated]);
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-     if (!isOpen) {
+    if (!isOpen) {
       toast.error("Period is closed");
       return;
-    } 
+    }
 
-     if (!isAvailable) {
+    if (!isAvailable) {
       toast.error("Quota is reached");
       return;
-    } 
+    }
 
     setLoading(true);
 
@@ -255,18 +255,21 @@ export default function Page() {
                     </div>
                   </div>
                 </EmptyContent>
+
+                <Separator className="my-6" />
+
+                <Alert
+                  variant="default"
+                  className="border-orange-300 text-orange-300 dark:text-orange-400 dark:border-orange-400"
+                >
+                  <AlertCircle className="size-4 text-orange-300 dark:text-orange-400" />
+                  <AlertTitle>Important</AlertTitle>
+                  <AlertDescription>
+                    Remember or note where you placed your capsule and what your
+                    secret code. This information is not stored anywhere else.
+                  </AlertDescription>
+                </Alert>
               </Empty>
-              <Alert
-                variant="default"
-                className="border-orange-300 text-orange-300 dark:text-orange-400 dark:border-orange-400"
-              >
-                <AlertCircle className="size-4 text-orange-300 dark:text-orange-400" />
-                <AlertTitle>Important</AlertTitle>
-                <AlertDescription>
-                  Remember or note where you placed your capsule and what your
-                  secret code. This information is not stored anywhere else.
-                </AlertDescription>
-              </Alert>
             </CardContent>
           </Card>
         );
