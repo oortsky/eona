@@ -610,13 +610,13 @@ function CreateCapsule() {
             </FieldGroup>
           </form>
 
-          <Separator />
+          <Separator className="my-6" />
 
           <Alert
             variant="default"
             className="border-orange-300 text-orange-300 dark:text-orange-400 dark:border-orange-400"
           >
-            <AlertCircle className="size-3" />
+            <AlertCircle className="size-3 text-orange-300 dark:text-orange-400" />
             <AlertTitle>Important</AlertTitle>
             <AlertDescription>
               Remember or note where you placed your capsule and what your
