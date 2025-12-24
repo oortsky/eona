@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![EONA Logo](https://via.placeholder.com/200x200?text=EONA)
+<img src="./public/images/avatar.png" alt="EONA Logo" width="300">
 
 **A Digital Time-Capsule Platform with Geo-Location**
 
@@ -53,7 +53,7 @@ Imagine leaving a message for your future self, or creating a digital time capsu
 
 ### Quick Start
 
-1. Visit [EONA Website](#) during the annual period (Dec 25-31)
+1. Visit [EONA Website](https://eona-mocha.vercel.app/) during the annual period (Dec 25-31)
 2. Create your account
 3. Create your first time capsule
 4. Set the unlock date and location
@@ -122,7 +122,7 @@ EONA is a **free service** from Axara Dev, but you can help ensure it continues 
 - ⭐ Star this repository
 - 🐛 Report bugs and issues
 - 💡 Suggest new features
-- 💵 Support through our official channels
+- 💵 Support through our [Trakteer](https://trakteer.id/oortsky/tip)
 - 📢 Spread the word
 
 Your support helps maintain infrastructure, security, and development of new features.
