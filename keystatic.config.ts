@@ -1,8 +1,13 @@
 import { config, fields, singleton } from "@keystatic/core";
 
+const REPO_OWNER = oortsky
+const REPO_NAME = eona
+
+
 export default config({
   storage: {
-    kind: "local"
+    kind: "github",
+    repo: `${REPO_OWNER}/${REPO_NAME}`
   },
   ui: {
     brand: {
