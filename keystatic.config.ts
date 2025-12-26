@@ -1,8 +1,7 @@
 import { config, fields, singleton } from "@keystatic/core";
 
-const REPO_OWNER = oortsky
-const REPO_NAME = eona
-
+const REPO_OWNER = "oortsky";
+const REPO_NAME = "eona";
 
 export default config({
   storage: {
